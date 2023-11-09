@@ -1,0 +1,176 @@
+// Compiling commands:
+// (base) mariacameron@wireless-10-104-29-24 Rayyan % gcc FindHausdorffDim.c -lm -O3
+// (base) mariacameron@wireless-10-104-29-24 Rayyan % ./a.out                       
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+
+#define KMIN 0
+#define KMAX 20
+#define max(a,b) ((a) >= (b) ? (a) : (b))
+#define min(a,b) ((a) <= (b) ? (a) : (b))
+
+struct binary_interval {
+	int level;
+	int ind;
+	struct binary_interval *left_child;
+	struct binary_interval *right_child;
+};
+
+// Hausdorff measure function from Stewart's paper
+double Hausdorff_measure(double d,struct binary_interval *node,int kmin,int kmax);
+
+// Checks if the binary interval contains at least one point of the Cantor set
+char set_test(struct binary_interval *node);
+
+// Gets the left endpoint of the binary interval
+double get_left_endpoint(struct binary_interval *node);
+
+// allocates memory for binary interval and outputs pointer to it
+struct binary_interval *create_node(int level,int ind);
+
+// the driver for the code, must be the last function in the code
+int main(void);
+
+// This code computed the Hausdorff dimension of the Cantor set
+// The Hausdorff dimension of a set A is defined as 
+//
+// dim_H(A) = inf{d : H_d(A) = 0} = sup{d : H_d(A) = +\infinity}
+//
+// where H_d(A) is the Hausdorff measure of the set A defined as
+//
+// H_d(A) = inf_{delta-->0}inf_{{U_j}} \sum_j (diam U_j)^d,
+//
+// where the infimum is taken over all covers of A by sets U_j with diameter <= delta
+//
+// In this code, the test set is the Cantor set in 1D:
+//
+// C = [0,1] \ Union_{n=0}^{infinity} Union_{k=0}^{3^n-1} ((3k+1)/3^{n+1},(3k+2)/3^{n+1})
+
+double get_left_endpoint(struct binary_interval *node) {
+	double left_endpoint = node->ind/pow(2,node->level);
+	return left_endpoint;
+}
+
+char set_test(struct binary_interval *node) {
+// tests if the binary interval belongs or not to the Cantor set
+	int n,k;
+	double left_endpoint = get_left_endpoint(node);
+	double right_endpoint = left_endpoint + 1.0/pow(2,node->level);
+	double aux,t_left,t_right;
+	char test = 1;
+	char flag = 0;
+	double t_list[] = {0.125, 0.13, 0.2, 0.22, 0.55, 0.72, 0.83, 0.84};
+	size_t size = sizeof(t_list) / sizeof(t_list[0]);
+	for(n = 0; n < size; n++){
+		t_left = t_list[2*n];
+		t_right = t_list[2*n+1];
+		if( left_endpoint > t_right || right_endpoint < t_left){
+		test = 0;
+		flag = 0;
+	 }
+	 else { 
+		test = 1;
+		flag = 1;
+	 }
+	
+	}
+	return test;
+}
+
+n = 0;
+	NMAX = 20;
+	if(lx/2 < test_l){
+		test = 1;
+		return test;
+	}
+
+	if(lx/2 >= test_l){
+		if(left_x > x0+(lx/2) && down_y > y0+(ly/2) && left_x + test_l < x0 + lx && down_y + test_l < y0 + ly){
+			test = 0;
+			return test;}
+		else{
+			test = 
+			set_test(node,x0,y0+(ly/2),lx/2,ly/2)* 
+			set_test(node,x0+(lx/2),y0,lx/2,ly/2)*
+			set_test(node,x0,y0,lx/2,ly/2);
+			return test;
+		}
+	}
+	return test;
+}
+
+double Hausdorff_measure(double d,struct binary_interval *node,int kmin,int kmax) {
+	int level = node->level,ind = node->ind;
+	double measure = 0.0,min_measure = 1.0/pow(2,d*kmax);
+	char test_node;
+	// return test_node = 0 is the interval contains no points of Cantor's set
+	// return test_node = 1 otherwise
+
+    // test if node intersects with the set
+    test_node = set_test(node);
+    if( test_node == 1 ) {	
+		if( level == kmax ) {
+			measure = min_measure;
+			free(node);
+			return measure;
+		}
+    	node->left_child = create_node(level + 1,2*ind);
+    	node->right_child = create_node(level + 1,2*ind + 1);
+    	measure = Hausdorff_measure(d,node->left_child,kmin,kmax) + 
+    			  Hausdorff_measure(d,node->right_child,kmin,kmax);
+    	// Masha is not sure about the need for this if	(needed for countable sets?)	  
+    	// if( level >= kmin ) {
+    		//measure = min(measure,1.0/pow(2,d*level));
+    	//}
+    }
+    free(node);
+    return measure;
+}
+
+struct binary_interval *create_node(int level,int ind){
+	struct binary_interval *node;
+	
+	// allocate memory for a single binary interval
+	// required size of memory piece: sizeof(struct binary_interval)
+	// request to allocate it: malloc(...)
+	// request to structure it for recording the datatype struct binary_interval *
+	node = (struct binary_interval *)malloc(sizeof(struct binary_interval));
+	node->level = level;
+	node->ind = ind;
+	node->left_child = NULL;
+	node->right_child = NULL;
+	
+	return node;
+}
+
+int main(void) {
+	struct binary_interval *node;
+	double d,dmin = 0.85,dmax = 1.2,dstep = 5.0e-2;	
+	double Haus;  // Hausdorff measure for the current dimension
+	int kmin = KMIN, kmax;
+    clock_t CPUbegin; // for measuring CPU time
+    double cpu; // for recording CPU time
+    FILE *fid; // 
+    
+    fid = fopen("Cantor.txt","w");
+	for( d = dmin; d <= dmax; d+=dstep ) {
+		printf("d = %.4f\n",d);
+		fprintf(fid,"d = %.4f\n",d);
+		for( kmax = 5; kmax <= KMAX; kmax++ ) {
+		    CPUbegin=clock(); // start time measurement
+			node = create_node(0,0); // create node of level 0 and index 0
+			 // Hausdorff measure of the Cantor set of dimension d
+			Haus = Hausdorff_measure(d,node,kmin,kmax);
+		    cpu = (clock()-CPUbegin)/((double)CLOCKS_PER_SEC);	// end time measurement		
+			printf("kmax = %i\t Hmeasure = %.6e \t CPU time = %g\n",kmax,Haus,cpu);
+			fprintf(fid,"%i\t %.6e\t %g\n",kmax,Haus,cpu);
+		}			
+	}
+	fclose(fid);
+	return 0;
+}
+
